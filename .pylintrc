@@ -1,0 +1,6 @@
+[TYPECHECK]
+ignored-modules=pydantic.EmailStr
+
+[MESSAGES CONTROL]
+disable = C0103, C0301, C0303, E0611
+disable=expression-not-assigned, no-member, invalid-name, reportGeneralTypeIssues, useless-suppression, PylancereportGeneralTypeIssues
