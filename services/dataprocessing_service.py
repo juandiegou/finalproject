@@ -13,23 +13,42 @@ class DataProcessingService :
   HOST = "http://127.0.0.1:8000/"
   def __init__(self) :
     self.dataFrame = None
-    self._dataBase = Repository() # type: ignore
+    self._dataBase = Repository("main")
     
-  async def saveFile(self, file,extension):
+    
+  # async def saveFile(self, file,extension):
+  #   try:
+  #     #filePath,fileFullName = await self._saveFile(file)
+  #     fileContent, fileName = await self._saveFile(file)
+  #     extension = fileName.split('.')[1]
+  #     self._createDateFrame(extension,fileContent)
+  #     self._loadDataFrame(fileName)      
+  #     return f"{fileName}"
+  #   except Exception as error:
+  #       raise error
+    
+  async def saveFile(self, file,extension):  
     try:
-      filePath,fileFullName = await self._saveFile(file)
-      self._createDateFrame(extension,filePath)
-      self._loadDataFrame(fileFullName)      
-      return f"{fileFullName}"
+      fileContent = file.read()
+      fileName = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '_' + file.filename
+      
+      data = pd.read_csv(file.file)
+
+      dataToInsert = data.to_json(orient='records')
+      insertadoId = str(self._dataBase.insertDataframe(json.loads(dataToInsert),fileName))
+
+
+      return insertadoId
+    
     except Exception as error:
         raise error
-      
-  def _createDateFrame(self,extension,filePath) :
-    if extension == 'xlsx' :
-      self._createDataFrameExcel(filePath)
-    else:
-      self._createDataFrameCsv(filePath)
-      
+    
+  def saveUpdateDF(self, data, filename):
+    insertadoId = str(self._dataBase.insertDataframe(data, filename))
+
+    return insertadoId
+
+  
   def _loadDataFrame(self,fileName)-> str :
     try:
       if self.dataFrame is None:
@@ -38,39 +57,16 @@ class DataProcessingService :
       return self._dataBase.insertDataframe(json.loads(dataToInsert),fileName)
     except Exception as error: 
       raise error   
-      
-  async def _saveFile(self, file):
-    try: 
-      fileContent = await file.read()
-      fileName = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '_' + file.filename
-      filePath = os.path.join( self.DIRECTORY, fileName)
-      with open(filePath, "wb") as f:
-        f.write(fileContent)
-      return filePath,fileName.split('.')[0]
-    except Exception as error:
-      raise error
-    
-  def _createDataFrameExcel(self,path):
-    try:
-      self._setDataFrame(pd.read_excel(path))
-    except Exception as error: 
-      raise error
-    
-  def _createDataFrameCsv(self,path):
-    try:
-      self._setDataFrame(pd.read_csv(path, delimiter=","))
-    except Exception as error: 
-      raise error
     
   def _setDataFrame(self, dataFrame):
     self.dataFrame = dataFrame
     
   def searchFile(self,dataset):
-    pathFile,extension = self._searchFile(dataset)
-    if pathFile is None:
-      return False
-    self._createDateFrame(extension,pathFile) 
-    return True
+     pathFile,extension = self._searchFile(dataset)
+     if pathFile is None:
+       return False
+     self._createDateFrame(extension,pathFile) 
+     return True
 
   def _describeDataset(self):
     try:
@@ -109,14 +105,29 @@ class DataProcessingService :
           fileNames.append(fileName.split('.')[0])
     return fileNames
   
-  def processMissingData(self,dataset,type_missing_data):
+  def processMissingData(self,dataset_id, type_missing_data):
     try:
+      data = self.loadDataFromMongoOnline(dataset_id)
+
+      if data[0]:
+        if type_missing_data == 1:
+          newData = self._eraseRowIfExitstNull(data[1])
+          self.saveFile(newData)
+          return "Es uno"
+
+        if type_missing_data == 2:
+          return "Es Dos"
+
+      return None
+    
+      """
       if self.dataFrame is None:
         return None
       fileFullName =f"{dataset}_clean"
       if type_missing_data == 1: self._missingDataDiscard()     
       if type_missing_data == 2: self._missingDataImputation()      
       return self._loadDataFrame(fileFullName)
+      """
     except Exception as error:
       raise error
     
@@ -256,10 +267,82 @@ class DataProcessingService :
     except Exception as error:
       raise error    
     
-  def basicDescribes(self,dataset):
-    if self.searchFile(dataset):
-      dict = self._basicDescribes()
-      return dict
-    return None
+  def basicDescribes(self,dataset_id):
+       data = self.loadDataFromMongoOnline(dataset_id)
+
+       if data[0]:
+         pandas_df = self.reconstructData(data[1])
+         export_df = self.describePandasDataFrame(pandas_df)
+         export_df = self.formatPrettyResponse(export_df)
+         return export_df
+
+       return None
+        
+
+  def loadDataFromMongoOnline(self,dataset_id):
+    data = self._dataBase.getCollectionByID(dataset_id)
+
+    if data != None:
+      return (True, data)
     
+    return (False, None)
   
+
+
+  def reconstructData(self, data):
+    objConvert = list(data)
+    objConvert = objConvert[0]["data"]
+    objConvert = str(objConvert)
+    objConvert = objConvert.replace("\'", "\"")
+    objConvert = json.loads(objConvert)
+
+    return pd.DataFrame(objConvert)
+  
+
+  def getAllColunsnames(self, data):
+    colsNames = list(data)
+    colsNames = colsNames[0]["data"]
+
+
+  
+  def describePandasDataFrame(self, pandas_data):
+    return pandas_data.describe()
+  
+
+  def formatPrettyResponse(self, data):
+      final_cols = ['Age ', 'Gender', 'BMI', 'Nausea/Vomting']
+
+      for i in data.columns:
+          if i not in final_cols:
+              data = data.drop([i], axis=1)
+
+      return data
+  
+
+  def getColumsNames(self, idataset_id):
+    """
+    Enter a ID to search in MongoDB and return all Coluns Names
+    """
+    data = self.loadDataFromMongoOnline(idataset_id)
+
+    if data[0]:
+      return self._getColumsNamesXDataType(data[1])
+
+
+    return None
+  
+
+  def _getColumsNamesXDataType(self, data):
+    df = self.reconstructData(data)
+    _dtTypes = {}
+    for i in df.columns.tolist():
+      _dtTypes[i] = df[i].dtypes
+
+    return str(_dtTypes)
+  
+
+  def _eraseRowIfExitstNull(self, data):
+    data = self.reconstructData(data)
+    data = data.dropna()
+
+    return data

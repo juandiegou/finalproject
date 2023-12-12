@@ -1,6 +1,7 @@
 """
     This is a Router for a company services
 """
+from bson import ObjectId
 from fastapi import APIRouter, UploadFile, File, status, Response
 from fastapi.responses import JSONResponse
 from services import DataProcessingService
@@ -20,6 +21,7 @@ async def load_file(file :UploadFile) -> JSONResponse:
         JSONResponse: The response of load
     """
     try:
+        print("file:",file.file)
         if not file.filename:
             return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
                                 content={"detail": "No file name provided"})
@@ -29,17 +31,20 @@ async def load_file(file :UploadFile) -> JSONResponse:
                                 content={"detail": "Extension file not allowed"})
         dataset= await data_processing_service.saveFile(file,extension)
         if dataset is not None:
+            print("log1:")
             return JSONResponse(status_code=status.HTTP_200_OK,
                                 content={"detail": "File loaded successfully",
                                          "dataset_id": dataset})
+        print("log2:")
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             content={"detail": "Upload file error"})
-
+    
     except Exception as error:  
+        print("error:",error)
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             content={"detail": "Upload file error"})
         
-@router.get('basics_statistics/{dataset_id}')
+@router.get('/basics_statistics/{dataset_id}')
 async def get_basic_statistics(dataset_id: str) -> JSONResponse:
     """_summary_
 
@@ -49,14 +54,19 @@ async def get_basic_statistics(dataset_id: str) -> JSONResponse:
     Returns:
         JSONResponse: The basic statistics of dataset
     """
-    basic_statistics = data_processing_service.basicDescribes(dataset=dataset_id)  
-    if basic_statistics is None:
-        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
-                            content={"detail": "Dataset not found"})
+    obj_id = ObjectId(dataset_id)
+    basic_statistics = str(data_processing_service.basicDescribes(obj_id))
+    # descargar en excel
+
+    if basic_statistics is not None:
+        return JSONResponse(status_code=status.HTTP_200_OK,
+                            content={"detail": "Dataset retrieved successfully",
+                                         "dataset": basic_statistics})
     else:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,content={"detail": "Dataset not found"})
     
-@router.get('columns-describe/{dataset_id}')
+    
+@router.get('/columns-describe/{dataset_id}')
 async def get_columns_describe(dataset_id: str) -> JSONResponse:
     """_summary_
 
@@ -66,15 +76,17 @@ async def get_columns_describe(dataset_id: str) -> JSONResponse:
     Returns:
         JSONResponse: The columns describe of dataset
     """
-    description = data_processing_service.describeDataset(dataset=dataset_id)
+    obj_id = ObjectId(dataset_id)
+    description = str(data_processing_service.getColumsNames(obj_id))
+
     if description is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
                             content={"detail": "Dataset not found"})
     return JSONResponse(status_code=200,
                         content={"detail": description})
        
-@router.post('imputation/{dataset_id}/type/{number_type}')
-async def imputation_and_type(dataset_id:int, number_type: int) -> JSONResponse:
+@router.post('/imputation/{dataset_id}/type/{number_type}')
+async def imputation_and_type(dataset_id:str, number_type: int) -> JSONResponse:
     """_summary_
 
     Args:
@@ -84,7 +96,9 @@ async def imputation_and_type(dataset_id:int, number_type: int) -> JSONResponse:
     Returns:
         JSONResponse: The imputation of dataset
     """
-    clean_dataset = data_processing_service.processMissingData(dataset=dataset_id,type_missing_data=number_type)
+    obj_id = ObjectId(dataset_id)
+    clean_dataset = str(data_processing_service.processMissingData(obj_id, type_missing_data=number_type))
+    
     if clean_dataset is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
                             content={"detail": "Dataset not found"})

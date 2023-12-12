@@ -1,6 +1,7 @@
 """_summary_
     A company Reposiory
 """
+
 from typing import Any, List
 from pymongo.database import Database
 from pymongo.collection import Collection
@@ -35,11 +36,17 @@ class Repository():
             data (Any): The data to insert
         Returns:
             str: The id of the data inserted
-        """ 
+        """
+        #print("data", data)
         return self.database[self.collection].insert_one({"data":data,"file_name":file_name}).inserted_id
+        
  
     def getColeccion(self,dataset: str) -> Any:
         return self.database[dataset].find()
+    
+
+    def getCollectionByID(self, id: Any) -> Any:
+        return self.database['main'].find({"_id": id})
     
     def load_file(self, file: str) -> object:
         """_summary_
