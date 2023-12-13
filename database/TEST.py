@@ -22,10 +22,14 @@ from bson import ObjectId
 id = ObjectId('65778e5855ceae4b2d460b3b')
 obj = db['main'].find({"_id": id})
 
-obj = list(obj)[0]
-obj = obj['file_name']
+obj = list(obj)
+obj = obj[0]['data']
+import json
+obj = str(obj).replace("\'", "\"")
+obj = json.loads(obj)
+import pandas as pd
 
-
+df = pd.DataFrame(obj)
 
 
 print(obj)

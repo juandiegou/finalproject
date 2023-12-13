@@ -97,7 +97,7 @@ async def imputation_and_type(dataset_id:str, number_type: int) -> JSONResponse:
         JSONResponse: The imputation of dataset
     """
     obj_id = ObjectId(dataset_id)
-    clean_dataset = str(data_processing_service.processMissingData(obj_id, type_missing_data=number_type))
+    clean_dataset = await data_processing_service.processMissingData(obj_id, type_missing_data=number_type)
     
     if clean_dataset is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
@@ -105,7 +105,7 @@ async def imputation_and_type(dataset_id:str, number_type: int) -> JSONResponse:
     else:
         return JSONResponse(status_code=200,
                             content={"detail": "Dataset imputated successfully", 
-                                     "dataset_id": clean_dataset})
+                                     "dataset_id": str(clean_dataset)})
     
     
 @router.post('general-univariable-graphs/{dataset_id}')

@@ -43,11 +43,14 @@ class DataProcessingService :
     except Exception as error:
         raise error
     
-  def saveUpdateDF(self, data, filename):
-    insertadoId = str(self._dataBase.insertDataframe(data, filename))
+  async def saveUpdateDF(self, data, filename):
+    try:
+      insertadoId = str(self._dataBase.insertDataframe(data, filename))
+      
+      return insertadoId
 
-    return insertadoId
-
+    except Exception as error:
+      raise error
   
   def _loadDataFrame(self,fileName)-> str :
     try:
@@ -112,8 +115,8 @@ class DataProcessingService :
       if data[0]:
         if type_missing_data == 1:
           newData = self._eraseRowIfExitstNull(data[1])
-          self.saveFile(newData)
-          return "Es uno"
+          filename = f"update-{self.fileNameFromMongoOnline(dataset_id)}"
+          return self.saveUpdateDF(newData, filename)
 
         if type_missing_data == 2:
           return "Es Dos"
@@ -287,6 +290,16 @@ class DataProcessingService :
     
     return (False, None)
   
+  def fileNameFromMongoOnline(self, dataset_id):
+    data = self.loadDataFromMongoOnline(dataset_id)
+
+    if data[0]:
+      filename = list(data[1])
+      filename = filename[0]
+      filename = filename['file_name']
+      return filename
+    
+    return None
 
 
   def reconstructData(self, data):
@@ -344,5 +357,6 @@ class DataProcessingService :
   def _eraseRowIfExitstNull(self, data):
     data = self.reconstructData(data)
     data = data.dropna()
+    data = data.to_json(orient='records')
 
     return data
