@@ -114,28 +114,21 @@ class DataProcessingService :
       data = self.loadDataFromMongoOnline(dataset_id)
 
       if data[0]:
-        if type_missing_data == 1:
-          newData = self._eraseRowIfExitstNull(data[1])
+        if type_missing_data == 1 or type_missing_data == 2:
+          if type_missing_data == 1:
+            newData = self._eraseRowIfExitstNull(data[1])
+
+          if type_missing_data == 2:
+            newData = self._replaceRowValueIfExitstsNull(data[1])
+
           filename = f"update-{self.fileNameFromMongoOnline(dataset_id)}"
           id = self.saveUpdateDF(newData, filename)
           return id
 
-        if type_missing_data == 2:
-          return "Es Dos"
-        
-
         return f"NOT VALID OPTION {type_missing_data}"
 
       return None
-    
-      """
-      if self.dataFrame is None:
-        return None
-      fileFullName =f"{dataset}_clean"
-      if type_missing_data == 1: self._missingDataDiscard()     
-      if type_missing_data == 2: self._missingDataImputation()      
-      return self._loadDataFrame(fileFullName)
-      """
+
     except Exception as error:
       raise error
     
@@ -360,3 +353,59 @@ class DataProcessingService :
     data = data.to_json(orient='records')
   
     return data
+  
+
+  def _replaceRowValueIfExitstsNull(self, data):
+    data = self.reconstructData(data)
+    for i in data.columns:
+      _data = data[i]
+      if "NaN" in _data.values:
+        if self.allValuesInColBeNumber(data, i):
+          _mean = self.getValueOfMean(data, i)
+          data[i] = data[i].replace('NaN', _mean)
+
+    data = data.to_json(orient='records')
+    return data
+
+  def allValuesInColBeNumber(self, data, key):
+    """
+    retrun bool Say if all values in col be (integer or float)
+    Iterate a pandas col
+    if all values in col be integer or float always expect condition
+    and hav inusual value is a error
+    """
+    _errors = 0
+    for i in data[key]:
+      if str(i) == "NaN":
+        continue
+      else:
+        if type(i) is float or type(i) is int:
+          continue
+        _errors = _errors + 1
+      
+    return _errors == 0
+  
+
+  def getValueOfMean(self, data, key):
+    """
+    Enter a pandas dataframe 
+    and calculate mean 
+    """
+    _errors = 0
+    _lenData = 0
+    _sum = 0
+
+    for i in data[key]:
+      if str(i) == "NaN":
+        continue
+      else:
+        if type(i) is float or type(i) is int:
+          _sum = _sum + float(i)
+          _lenData = _lenData + 1
+        else:
+          _errors = _errors + 1
+
+    if _errors == 0:
+      return _sum / _lenData
+    
+    return 0
