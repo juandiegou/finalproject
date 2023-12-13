@@ -160,65 +160,78 @@ class DataProcessingService :
       dataFrame[column].fillna(mode, inplace=True)
     return dataFrame
   
-  def graphicalAnalysis(self,dataset):
-    if not self.searchDatase(dataset) :
-      return None, None, None
-    arr =  dataset.split('_')
-    if arr[len(arr)-1] != "limpio":
-      raise ValueError("It is recommended to first do the treatment of missing data for the dataset '{dataset}'")
-    histograms = self._histograms(dataset)
-    boxplots = self._boxPlots(dataset)     
-    probilityDistribution = self._probabilityDistribution(dataset) 
-    return histograms, probilityDistribution, boxplots
+  def graphicalAnalysis(self,id_dataset):
+    data = self.loadDataFromMongoOnline(id_dataset)
 
-  def _histograms(self,dataset):
-    try:
-      if self.dataFrame is None:
-        return None
-      dfNumeric = self.dataFrame.select_dtypes(np.number)
-      plt.rcParams['figure.figsize'] = (19, 9)
-      plt.style.use('ggplot')
-      dfNumeric.hist()
-      folderPath = self.createfolder("histograms")
-      filePath = os.path.join(folderPath, dataset)
-      plt.savefig(filePath)
-      return f"{self.HOST}histograms/{dataset}.png"      
-            
-    except Exception as error:
-      print(f"error{error} hi")
-      raise error
+    if data[0]:
+      copy_data = self.reconstructData(data[1]).copy()
+      # need Create a folder to save IMGs ?
+      _base_route = f"IMAGES/{str(id_dataset)}"
+      self.createPathFolder(str(id_dataset))
+      _base_route_h = f"{_base_route}/histogram"
+      dfh = copy_data.copy()
+      self._histograms(dfh, _base_route_h)
+      _base_route_b = f"{_base_route}/box"
+      dhb = copy_data.copy()
+      self._boxPlots(dhb, _base_route_b)
+      dhp = copy_data.copy()
+      _base_route_p = f"{_base_route}/analitycs"
+      self._probabilityDistribution(dhp, _base_route_p)
 
-  def _boxPlots(self,dataset):
-    try:
-      if self.dataFrame is None:
-        return None
-      dfNumeric = self.dataFrame.select_dtypes(np.number)
-      plt.rcParams['figure.figsize'] = (19, 9)
-      plt.style.use('ggplot')
-      dfNumeric.boxplot()
-      folderPath = self.createfolder("boxPlots")
-      filePath = os.path.join(folderPath, dataset)
-      plt.savefig(filePath)
-      return f"{self.HOST}boxPlots/{dataset}.png"
-    except Exception as error:
-      print(f"error{error} bo")
-      raise error
+      if self.existsPathFolder(str(id_dataset)):
+        return f"The routes of IMG is: IMAGES/{str(id_dataset)}" 
+      else:
+        return "Error to create folders in server"
+
+    return None
+  
+
+  def _histograms(self,data, route):
+    """
+    Enter a DataFrame & path and save all histograms in files
+    """
+    for i in data.columns:
+      try:
+        if self.allValuesInColBeNumber(data, i):
+          plt.hist(data[i], bins=10, alpha=0.7, color='blue')
+          plt.xlabel("Values")
+          plt.ylabel("Frecuency")
+          plt.title(f"Histogram {i}")
+          _final_route = f"{route}/his_{i}.png"
+          plt.savefig(_final_route)
+      except:
+        print(f"Error en: {i}")
+
+  def _boxPlots(self,data, route):
+    plt.clf()
+    for i in data.columns:
+      try:
+        if self.allValuesInColBeNumber(data, i):
+          data.boxplot(column=[i])
+          plt.title(f"Box Diagram {i}")
+          plt.xlabel("Columns")
+          plt.ylabel("Values")
+          _final_route = f"{route}/box_{i}.png"
+          plt.savefig(_final_route)
+      except:
+        print(f"Error in: {i}")
+
     
-  def _probabilityDistribution(self,dataset):
-    try:
-      if self.dataFrame is None:
-        return None
-      dfNumeric = self.dataFrame.select_dtypes(np.number)
-      plt.rcParams['figure.figsize'] = (19, 9)
-      plt.style.use('ggplot')
-      dfNumeric.plot(kind='density', subplots=True, layout=(3, 3), sharex=False)
-      folderPath = self.createfolder("probabilityDistribution")
-      filePath = os.path.join(folderPath, dataset)
-      plt.savefig(filePath)
-      return f"{self.HOST}probabilityDistribution/{dataset}.png"
-    except Exception as error:
-      print(f"error{error} pr")
-      raise error
+  def _probabilityDistribution(self, data, route):
+    plt.clf()
+    for i in data.columns:
+      try:
+        if self.allValuesInColBeNumber(data, i):
+          plt.figure(figsize=(8, 4))
+          data[i].plot(kind='density', color='blue')
+          plt.title(i)
+          plt.xlabel('Values')
+          plt.ylabel('density')
+          plt.grid(True)
+          _final_route = f"{route}/pd_{i}.png"
+          plt.savefig(_final_route)
+      except:
+        print(f"Error in: {i}")
 
   def _correlationMatrix(self,dataset):
     try:
@@ -449,3 +462,25 @@ class DataProcessingService :
       return _sum / _lenData
     
     return 0
+  
+
+  def createPathFolder(self, id):
+    try:
+      if not self.existsPathFolder(id):
+        path = f"IMAGES/{id}" 
+        _h = f"IMAGES/{id}/histogram"
+        _b = f"IMAGES/{id}/box"
+        _a = f"IMAGES/{id}/analitycs"  
+        os.makedirs(path)
+        os.makedirs(_h)
+        os.makedirs(_b)
+        os.makedirs(_a)
+    except:
+      return False
+
+  def existsPathFolder(self, idFolderPath):
+    _basePath = f"IMAGES/{idFolderPath}" 
+    try:
+      return os.path.exists(_basePath)
+    except:
+      return False

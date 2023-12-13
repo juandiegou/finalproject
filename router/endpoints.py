@@ -109,7 +109,7 @@ async def imputation_and_type(dataset_id:str, number_type: int) -> JSONResponse:
     
     
 @router.post('/general-univariable-graphs/{dataset_id}')
-async def set_general_univariable_graphs(dataset_id: int) -> JSONResponse:
+def set_general_univariable_graphs(dataset_id: str) -> JSONResponse:
     """_summary_
 
     Args:
@@ -118,16 +118,12 @@ async def set_general_univariable_graphs(dataset_id: int) -> JSONResponse:
     Returns:
         JSONResponse: The general univariable graphs of dataset
     """
-    histograms, probilityDistribution, boxplots = data_processing_service.graphicalAnalysis(dataset=dataset_id)
-    content_response = {}
-    if histograms is not None:
-        content_response["histograms"] = histograms
-    if probilityDistribution is not None:
-        content_response["probilityDistribution"] = probilityDistribution
-    if boxplots is not None:
-        content_response["boxplots"] = boxplots
+    obj_id = ObjectId(dataset_id)
+    generate_imgs = data_processing_service.graphicalAnalysis(obj_id)
+    
+
     return JSONResponse(status_code=200,
-                        content={"detail": "grafical analisys created successfully", "data": content_response })
+                        content={"detail": "grafical analisys created successfully", "data": str(generate_imgs) })
     
     
 @router.post('/univariable-graphs-class/{dataset_id}')
