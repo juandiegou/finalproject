@@ -2,8 +2,8 @@
     This is a Router for a company services
 """
 from bson import ObjectId
-from fastapi import APIRouter, UploadFile, File, status, Response
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, status, Response
+from fastapi.responses import JSONResponse, StreamingResponse
 from services import DataProcessingService
 router = APIRouter()
 data_processing_service = DataProcessingService()
@@ -108,7 +108,7 @@ async def imputation_and_type(dataset_id:str, number_type: int) -> JSONResponse:
                                      "dataset_id": clean_dataset})
     
     
-@router.post('general-univariable-graphs/{dataset_id}')
+@router.post('/general-univariable-graphs/{dataset_id}')
 async def set_general_univariable_graphs(dataset_id: int) -> JSONResponse:
     """_summary_
 
@@ -130,7 +130,7 @@ async def set_general_univariable_graphs(dataset_id: int) -> JSONResponse:
                         content={"detail": "grafical analisys created successfully", "data": content_response })
     
     
-@router.post('univariable-graphs-class/{dataset_id}')
+@router.post('/univariable-graphs-class/{dataset_id}')
 async def set_general_univariable_class(dataset_id: int) -> JSONResponse:
     """_summary_
 
@@ -143,7 +143,7 @@ async def set_general_univariable_class(dataset_id: int) -> JSONResponse:
     return JSONResponse(status_code=200,
                         content={"detail": "general_univariable_class"})
     
-@router.get('bivariable-graphs-class/{dataset_id}')
+@router.get('/bivariable-graphs-class/{dataset_id}')
 async def bivariable_graphs_class(dataset_id: int) -> JSONResponse:
     """_summary_
 
@@ -157,7 +157,7 @@ async def bivariable_graphs_class(dataset_id: int) -> JSONResponse:
                         content={"detail": "bivariable_graphs_class"})
     
     
-@router.get('multivaribale-graphs-class/{dataset_id}')
+@router.get('/multivaribale-graphs-class/{dataset_id}')
 async def multivaribale_graphs_class(dataset_id: int) -> JSONResponse:
     """_summary_
 
@@ -170,8 +170,8 @@ async def multivaribale_graphs_class(dataset_id: int) -> JSONResponse:
     return JSONResponse(status_code=200,
                         content={"detail": "multivaribale_graphs_class"})
     
-@router.post('pca/{dataset_id}')
-async def pca(dataset_id: int) -> JSONResponse:
+@router.post('/pca/{dataset_id}')
+async def pca(dataset_id: str) -> JSONResponse:
     """_summary_
 
     Args:
@@ -180,11 +180,15 @@ async def pca(dataset_id: int) -> JSONResponse:
     Returns:
         JSONResponse: The pca of dataset
     """
-    return JSONResponse(status_code=200,
-                        content={"detail": "pca"})
-    
+    obj_id = ObjectId(dataset_id)
+    pca,_ = data_processing_service.pca(idataset_id=obj_id)
+    if pca is None:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
+                            content={"detail": "Dataset not found"})
+    return StreamingResponse(pca, media_type="image/png", background=BackgroundTasks)
+
 @router.post('train/{dataset_id}')
-async def train(dataset_id: int, algorithms:str, option_train:str,normalization:str) -> JSONResponse:
+async def train(dataset_id: str, algorithms:str, option_train:str,normalization:str) -> JSONResponse:
     """_summary_
 
     Args:
@@ -224,3 +228,4 @@ async def prediction(train_id: int) -> JSONResponse:
     """
     return JSONResponse(status_code=200,
                         content={"detail": "prediction"})
+
