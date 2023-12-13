@@ -372,7 +372,9 @@ class DataProcessingService :
       filename = "pca".join(filename).capitalize()
       pca_columns = [f'Componente_Principal_{i+1}' for i in range(n_components)]
       data_pca2 = pd.DataFrame(data_pca, columns=pca_columns)
-      #self.saveUpdateDF(data_pca2, filename)
+      data_pca2 = data_pca2.to_json(orient='records')
+
+      id = self.saveUpdateDF(data_pca2, filename)
       
      
       plt.scatter(data_pca[:,0], data_pca[:,1])
@@ -383,7 +385,7 @@ class DataProcessingService :
       plt.savefig(img_buffer, format='png')
       img_buffer.seek(0)
       plt.close()
-      return img_buffer,"image/png"
+      return img_buffer, id
     except Exception as error:
       raise error
 

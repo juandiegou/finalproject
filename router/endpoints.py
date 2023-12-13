@@ -181,11 +181,17 @@ async def pca(dataset_id: str) -> JSONResponse:
         JSONResponse: The pca of dataset
     """
     obj_id = ObjectId(dataset_id)
-    pca,_ = data_processing_service.pca(idataset_id=obj_id)
+    pca,idNewDF = data_processing_service.pca(idataset_id=obj_id)
+
+    
+    custom_headers = {
+            "dataset_id": str(idNewDF)
+        }
+
     if pca is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
                             content={"detail": "Dataset not found"})
-    return StreamingResponse(pca, media_type="image/png", background=BackgroundTasks)
+    return StreamingResponse(pca, media_type="image/png", background=BackgroundTasks, headers=custom_headers)
 
 @router.post('train/{dataset_id}')
 async def train(dataset_id: str, algorithms:str, option_train:str,normalization:str) -> JSONResponse:
