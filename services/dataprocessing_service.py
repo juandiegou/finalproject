@@ -6,6 +6,11 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import json
 import os
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+import io
+
 
 
 class DataProcessingService :
@@ -14,18 +19,6 @@ class DataProcessingService :
   def __init__(self) :
     self.dataFrame = None
     self._dataBase = Repository("main")
-    
-    
-  # async def saveFile(self, file,extension):
-  #   try:
-  #     #filePath,fileFullName = await self._saveFile(file)
-  #     fileContent, fileName = await self._saveFile(file)
-  #     extension = fileName.split('.')[1]
-  #     self._createDateFrame(extension,fileContent)
-  #     self._loadDataFrame(fileName)      
-  #     return f"{fileName}"
-  #   except Exception as error:
-  #       raise error
     
   async def saveFile(self, file,extension):  
     try:
@@ -353,6 +346,51 @@ class DataProcessingService :
     data = data.to_json(orient='records')
   
     return data
+
+
+  def pca(self, idataset_id ):
+    data= self.loadDataFromMongoOnline(idataset_id)
+    if data [0]:
+      return self._pca(data[1])
+
+    return None
+
+  def _pca(self, data):
+    try:
+      dataFilename = data.clone()
+      filename = list(dataFilename)
+      filename = filename[0]["file_name"]
+      dataframes = self.reconstructData(data)
+      dataframes = dataframes.dropna()
+      dataframes = dataframes.select_dtypes(np.number)
+      dataframes = dataframes.dropna()
+      
+      n_components = 2
+      pca = PCA(n_components=2)
+      data_pca = pca.fit_transform(dataframes)
+      
+      filename = "pca".join(filename).capitalize()
+      pca_columns = [f'Componente_Principal_{i+1}' for i in range(n_components)]
+      data_pca2 = pd.DataFrame(data_pca, columns=pca_columns)
+      #self.saveUpdateDF(data_pca2, filename)
+      
+     
+      plt.scatter(data_pca[:,0], data_pca[:,1])
+      plt.xlabel('Componente Principal 1')
+      plt.ylabel('Componente Principal 2')
+      
+      img_buffer = io.BytesIO()
+      plt.savefig(img_buffer, format='png')
+      img_buffer.seek(0)
+      plt.close()
+      return img_buffer,"image/png"
+    except Exception as error:
+      raise error
+
+    
+    
+    
+  
   
 
   def _replaceRowValueIfExitstsNull(self, data):
