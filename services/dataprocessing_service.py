@@ -33,6 +33,7 @@ class DataProcessingService :
       fileName = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '_' + file.filename
       
       data = pd.read_csv(file.file)
+      data = data.fillna("NaN")
 
       dataToInsert = data.to_json(orient='records')
       insertadoId = str(self._dataBase.insertDataframe(json.loads(dataToInsert),fileName))
@@ -312,12 +313,6 @@ class DataProcessingService :
     return pd.DataFrame(objConvert)
   
 
-  def getAllColunsnames(self, data):
-    colsNames = list(data)
-    colsNames = colsNames[0]["data"]
-
-
-  
   def describePandasDataFrame(self, pandas_data):
     return pandas_data.describe()
   
@@ -357,6 +352,14 @@ class DataProcessingService :
   def _eraseRowIfExitstNull(self, data):
     data = self.reconstructData(data)
     data = data.dropna()
+    data = data.to_json(orient='records')
+
+    return data
+  
+
+  def _eraseRowIfExitstNull(self, data):
+    data = self.reconstructData(data)
+    data = data.fillna(data.mean())
     data = data.to_json(orient='records')
 
     return data

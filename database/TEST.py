@@ -19,22 +19,50 @@ client = MongoClient(MONGO_URI)
 db = client[DATABASE]
 
 from bson import ObjectId
-id = ObjectId('65778e5855ceae4b2d460b3b')
+id = ObjectId('657907a1d6a197480708e551')
 obj = db['main'].find({"_id": id})
 
 obj = list(obj)
 obj = obj[0]['data']
-import json
-obj = str(obj).replace("\'", "\"")
-obj = json.loads(obj)
-import pandas as pd
-
-df = pd.DataFrame(obj)
+objConvert = obj
+objConvert = str(objConvert)
+objConvert = objConvert.replace("\'", "\"")
 
 
-print(obj)
+print(objConvert)
 
 """
+
+import json
+objConvert = json.loads(objConvert)
+
+import pandas as pd
+obj = pd.DataFrame(objConvert)
+
+
+
+_mean = {}
+
+
+def fillIfIsNumber(data, key):
+    data = data[key].fillna(data.mean())
+
+def fillIsText(data, key):
+    data = data[key]
+
+
+
+
+# Typo de col
+for i in obj.columns.tolist():
+    _typeData = obj[i].dtypes
+
+    if "int" in str(_typeData).lower() or "float" in str(_typeData).lower():
+        print("Es numero")
+    else:
+        print("No es numero")
+
+
 import json
 
 obj = str(obj).replace("\'", "\"")
