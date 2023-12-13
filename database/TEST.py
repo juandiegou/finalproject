@@ -19,7 +19,7 @@ client = MongoClient(MONGO_URI)
 db = client[DATABASE]
 
 from bson import ObjectId
-id = ObjectId('657907a1d6a197480708e551')
+id = ObjectId('65790f74348aa7ad03724567')
 obj = db['main'].find({"_id": id})
 
 obj = list(obj)
@@ -27,17 +27,24 @@ obj = obj[0]['data']
 objConvert = obj
 objConvert = str(objConvert)
 objConvert = objConvert.replace("\'", "\"")
-
-
-print(objConvert)
-
-"""
-
 import json
 objConvert = json.loads(objConvert)
 
 import pandas as pd
 obj = pd.DataFrame(objConvert)
+# 
+
+print(obj)
+
+obj = obj[~obj.eq("NaN").any(axis=1)]
+
+print(obj)
+
+"""
+
+
+
+
 
 
 

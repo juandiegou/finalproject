@@ -44,7 +44,7 @@ class DataProcessingService :
     except Exception as error:
         raise error
     
-  async def saveUpdateDF(self, data, filename):
+  def saveUpdateDF(self, data, filename):
     try:
       insertadoId = str(self._dataBase.insertDataframe(data, filename))
       
@@ -117,10 +117,14 @@ class DataProcessingService :
         if type_missing_data == 1:
           newData = self._eraseRowIfExitstNull(data[1])
           filename = f"update-{self.fileNameFromMongoOnline(dataset_id)}"
-          return self.saveUpdateDF(newData, filename)
+          id = self.saveUpdateDF(newData, filename)
+          return id
 
         if type_missing_data == 2:
           return "Es Dos"
+        
+
+        return f"NOT VALID OPTION {type_missing_data}"
 
       return None
     
@@ -351,15 +355,8 @@ class DataProcessingService :
 
   def _eraseRowIfExitstNull(self, data):
     data = self.reconstructData(data)
-    data = data.dropna()
+    _erase = data.eq("NaN").any(axis=1)
+    data = data[~_erase]
     data = data.to_json(orient='records')
-
-    return data
   
-
-  def _eraseRowIfExitstNull(self, data):
-    data = self.reconstructData(data)
-    data = data.fillna(data.mean())
-    data = data.to_json(orient='records')
-
     return data
